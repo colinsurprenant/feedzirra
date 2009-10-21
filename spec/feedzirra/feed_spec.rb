@@ -308,6 +308,7 @@ describe Feedzirra::Feed do
         describe 'when a compatible xml parser class is found' do
           it 'should set the last effective url to the feed url' do
             @easy_curl.should_receive(:last_effective_url).and_return(@paul_feed[:url])
+            @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
             @feed.should_receive(:feed_url=).with(@paul_feed[:url])
             Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
             @easy_curl.on_success.call(@easy_curl)
@@ -315,18 +316,21 @@ describe Feedzirra::Feed do
 
           it 'should set the etags on the feed' do
             @feed.should_receive(:etag=).with('ziEyTl4q9GH04BR4jgkImd0GvSE')
+            @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
             Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
             @easy_curl.on_success.call(@easy_curl)
           end
 
           it 'should set the last modified on the feed' do
             @feed.should_receive(:last_modified=).with('Wed, 28 Jan 2009 04:10:32 GMT')
+            @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
             Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
             @easy_curl.on_success.call(@easy_curl)
           end
 
           it 'should add the feed to the responses' do
             responses = {}
+            @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
             Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], responses, {})
             @easy_curl.on_success.call(@easy_curl)
             
@@ -337,6 +341,7 @@ describe Feedzirra::Feed do
           it 'should call proc if :on_success option is passed' do
             success = lambda { |url, feed| }
             success.should_receive(:call).with(@paul_feed[:url], @feed)
+            @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
             Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, { :on_success => success })
             @easy_curl.on_success.call(@easy_curl)
           end

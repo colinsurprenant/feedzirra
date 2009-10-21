@@ -213,24 +213,17 @@ module Feedzirra
         curl.timeout = options[:timeout] if options[:timeout]
         
         curl.on_success do |c|
-          add_url_to_multi(multi, url_queue.shift, url_queue, responses, options) unless url_queue.empty?
-          xml = decode_content(c)
-          klass = determine_feed_parser_for_xml(xml)
-          
-          if klass
-            begin
-              feed = klass.parse(xml)
-              feed.feed_url = c.last_effective_url
-              feed.etag = etag_from_header(c.header_str)
-              feed.last_modified = last_modified_from_header(c.header_str)
-              responses[url] = feed
-              options[:on_success].call(url, feed) if options.has_key?(:on_success)
-            rescue Exception => e
-              options[:on_failure].call(url, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
-            end
-          else
-            # puts "Error determining parser for #{url} - #{c.last_effective_url}"
-            # raise NoParserAvailable.new("no valid parser for content.") (this would unfirtunately fail the whole 'multi', so it's not really useable)
+          begin
+            add_url_to_multi(multi, url_queue.shift, url_queue, responses, options) unless url_queue.empty?
+            xml = decode_content(c)
+            feed = Feed.parse(xml)
+            feed.raw = xml
+            feed.feed_url = c.last_effective_url
+            feed.etag = etag_from_header(c.header_str)
+            feed.last_modified = last_modified_from_header(c.header_str)
+            responses[url] = feed
+            options[:on_success].call(url, feed) if options.has_key?(:on_success)
+          rescue Exception => e
             options[:on_failure].call(url, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
           end
         end
@@ -263,6 +256,7 @@ module Feedzirra
         curl.headers["User-Agent"]        = (options[:user_agent] || USER_AGENT)
         curl.headers["If-Modified-Since"] = feed.last_modified.httpdate if feed.last_modified
         curl.headers["If-None-Match"]     = feed.etag if feed.etag
+        curl.headers["Accept-encoding"]   = 'gzip, deflate' if options.has_key?(:compress)
         curl.userpwd = options[:http_authentication].join(':') if options.has_key?(:http_authentication)
         curl.follow_location = true
 
@@ -272,7 +266,9 @@ module Feedzirra
         curl.on_success do |c|
           begin
             add_feed_to_multi(multi, feed_queue.shift, feed_queue, responses, options) unless feed_queue.empty?
-            updated_feed = Feed.parse(c.body_str)
+            xml = decode_content(c)
+            updated_feed = Feed.parse(xml)
+            updated_feed.raw = xml
             updated_feed.feed_url = c.last_effective_url
             updated_feed.etag = etag_from_header(c.header_str)
             updated_feed.last_modified = last_modified_from_header(c.header_str)
