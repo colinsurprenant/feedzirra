@@ -289,18 +289,21 @@ describe Feedzirra::Feed do
 
         it 'should decode the response body' do
           Feedzirra::Feed.should_receive(:decode_content).with(@easy_curl).and_return(@paul_feed[:xml])
+          @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
           Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
           @easy_curl.on_success.call(@easy_curl)
         end
         
         it 'should determine the xml parser class' do
           Feedzirra::Feed.should_receive(:determine_feed_parser_for_xml).with(@paul_feed[:xml]).and_return(Feedzirra::Parser::AtomFeedBurner)
+          @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
           Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
           @easy_curl.on_success.call(@easy_curl)
         end
 
         it 'should parse the xml' do
           Feedzirra::Parser::AtomFeedBurner.should_receive(:parse).with(@paul_feed[:xml]).and_return(@feed)
+          @feed.should_receive(:raw=).with(@paul_feed[:xml]).once
           Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, {})
           @easy_curl.on_success.call(@easy_curl)
         end
@@ -364,7 +367,7 @@ describe Feedzirra::Feed do
 
         it 'should call proc if :on_failure option is passed' do
           failure = lambda { |url, feed| }
-          failure.should_receive(:call).with(@paul_feed[:url], 404, @headers, @body)
+          failure.should_receive(:call).with(@paul_feed[:url], 404, @headers, @body, an_instance_of(Feedzirra::CurbError))
           Feedzirra::Feed.add_url_to_multi(@multi, @paul_feed[:url], [], {}, { :on_failure => failure })
           @easy_curl.on_failure.call(@easy_curl)
         end

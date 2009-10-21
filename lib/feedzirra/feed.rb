@@ -1,5 +1,6 @@
 module Feedzirra
   class NoParserAvailable < StandardError; end
+  class CurbError < StandardError; end
   
   class Feed
     USER_AGENT = "feedzirra http://github.com/pauldix/feedzirra/tree/master"
@@ -223,15 +224,15 @@ module Feedzirra
             feed.last_modified = last_modified_from_header(c.header_str)
             responses[url] = feed
             options[:on_success].call(url, feed) if options.has_key?(:on_success)
-          rescue Exception => e
-            options[:on_failure].call(url, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
+          rescue => e
+            options[:on_failure].call(url, c.response_code, c.header_str, c.body_str, e) if options.has_key?(:on_failure)
           end
         end
         
         curl.on_failure do |c, err|
           add_url_to_multi(multi, url_queue.shift, url_queue, responses, options) unless url_queue.empty?
           responses[url] = c.response_code
-          options[:on_failure].call(url, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
+          options[:on_failure].call(url, c.response_code, c.header_str, c.body_str, CurbError.new(err.to_s)) if options.has_key?(:on_failure)
         end
       end
       multi.add(easy)
@@ -275,8 +276,8 @@ module Feedzirra
             feed.update_from_feed(updated_feed)
             responses[feed.feed_url] = feed
             options[:on_success].call(feed) if options.has_key?(:on_success)
-          rescue Exception => e
-            options[:on_failure].call(feed, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
+          rescue => e
+            options[:on_failure].call(feed, c.response_code, c.header_str, c.body_str, e) if options.has_key?(:on_failure)
           end
         end
 
@@ -288,7 +289,7 @@ module Feedzirra
             options[:on_success].call(feed) if options.has_key?(:on_success)
           else
             responses[feed.url] = c.response_code
-            options[:on_failure].call(feed, c.response_code, c.header_str, c.body_str) if options.has_key?(:on_failure)
+            options[:on_failure].call(feed, c.response_code, c.header_str, c.body_str, CurbError.new(err.to_s)) if options.has_key?(:on_failure)
           end
         end
       end
