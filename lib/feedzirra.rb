@@ -9,7 +9,7 @@ require 'dryopteris'
 require 'uri'
 require 'active_support/basic_object'
 require 'active_support/core_ext/object'
-require 'active_support/core_ext/time'
+#require 'active_support/core_ext/time'
 
 require 'core_ext/date'
 require 'core_ext/string'
